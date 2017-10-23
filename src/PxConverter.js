@@ -2,18 +2,20 @@ import css from 'css'
 import objectAssign from 'object-assign'
 
 const pxRegExp = /\b(\d+(\.\d+)?)px\b/
+const pxGlobalRegExp = new RegExp(pxRegExp.source, 'g')
 const defaultConfig = {
   baseSize: {
     rem: 75,
     vw: 7.5,
   },
   precision: 6,
+  forceRemProps: [ 'font', 'font-size' ],
   keepRuleComment: 'no',
   keepFileComment: 'pxconverter-disable',
 }
 
 export default class PxConverter {
-  contructor(options) {
+  constructor(options = {}) {
     this.config = objectAssign({}, defaultConfig, options)
   }
 
@@ -46,15 +48,10 @@ export default class PxConverter {
           && nextDec.comment.trim() === this.config.keepRuleComment
         if (isDisabled) return
 
-        dec.value = this.getCalcValue('rem', dec.value)
-        // 对于非字号的规则，需要增加一条 vw 的属性
-        if (dec.property !== 'font' && dec.property !== 'font-size') {
-          rule.declarations.splice(index + 1, 0, {
-            type: 'declaration',
-            property: dec.property,
-            value: this.getCalcValue('vw', dec.value),
-          })
-        }
+        const targetUnit = this.config.forceRemProps.indexOf(dec.property) > -1
+          ? 'rem'
+          : 'vw'
+        dec.value = this.getCalcValue(targetUnit, dec.value)
       })
     })
   }
@@ -63,9 +60,8 @@ export default class PxConverter {
     const baseSize = this.config.baseSize[targetUnit]
     if (!baseSize) return sourceValue
 
-    const value = sourceValue.match(pxRegExp)[1] / baseSize
-    return value
-      ? `${value.toFixed(this.config.precision)}${targetUnit}`
-      : 0
+    return sourceValue.replace(pxGlobalRegExp, ($0, $1) => {
+      return `${($1 / baseSize).toFixed(this.config.precision)}${targetUnit}`
+    })
   }
 }

@@ -7,19 +7,21 @@ var css = _interopDefault(require('css'));
 var objectAssign = _interopDefault(require('object-assign'));
 
 var pxRegExp = /\b(\d+(\.\d+)?)px\b/;
+var pxGlobalRegExp = new RegExp(pxRegExp.source, 'g');
 var defaultConfig = {
   baseSize: {
     rem: 75,
     vw: 7.5,
   },
   precision: 6,
+  forceRemProps: [ 'font', 'font-size' ],
   keepRuleComment: 'no',
   keepFileComment: 'pxconverter-disable',
 };
 
-var PxConverter = function PxConverter () {};
+var PxConverter = function PxConverter(options) {
+  if ( options === void 0 ) options = {};
 
-PxConverter.prototype.contructor = function contructor (options) {
   this.config = objectAssign({}, defaultConfig, options);
 };
 
@@ -54,27 +56,23 @@ PxConverter.prototype.processRules = function processRules (rules) {
         && nextDec.comment.trim() === this$1.config.keepRuleComment;
       if (isDisabled) { return }
 
-      dec.value = this$1.getCalcValue('rem', dec.value);
-      // 对于非字号的规则，需要增加一条 vw 的属性
-      if (dec.property !== 'font' && dec.property !== 'font-size') {
-        rule.declarations.splice(index + 1, 0, {
-          type: 'declaration',
-          property: dec.property,
-          value: this$1.getCalcValue('vw', dec.value),
-        });
-      }
+      var targetUnit = this$1.config.forceRemProps.indexOf(dec.property) > -1
+        ? 'rem'
+        : 'vw';
+      dec.value = this$1.getCalcValue(targetUnit, dec.value);
     });
   });
 };
 
 PxConverter.prototype.getCalcValue = function getCalcValue (targetUnit, sourceValue) {
+    var this$1 = this;
+
   var baseSize = this.config.baseSize[targetUnit];
   if (!baseSize) { return sourceValue }
 
-  var value = sourceValue.match(pxRegExp)[1] / baseSize;
-  return value
-    ? ("" + (value.toFixed(this.config.precision)) + targetUnit)
-    : 0
+  return sourceValue.replace(pxGlobalRegExp, function ($0, $1) {
+    return ("" + (($1 / baseSize).toFixed(this$1.config.precision)) + targetUnit)
+  })
 };
 
 var plugin = postcss.plugin('postcss-pxconverter', function (options) {

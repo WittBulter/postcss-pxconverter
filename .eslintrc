@@ -1,0 +1,49 @@
+env:
+  es6: true
+  browser: true
+
+parserOptions:
+  ecmaVersion: 6
+  ecmaFeatures:
+    experimentalObjectRestSpread: true
+  sourceType: module
+
+rules:
+  indent: [ 1, 2, SwitchCase: 1 ]
+  quotes: [ 1, single ]
+  linebreak-style: [ 1, unix ]
+  semi: [ 0, never ]
+  no-undef: [ 1 ]
+  no-console: [ 0 ]
+  no-debug: [ 0 ]
+  no-unused-vars: [ 1 ]
+  space-infix-ops: [ 1 ]
+  no-multi-spaces: [ 1 ]
+  no-fallthrough: [ 0 ]
+  comma-dangle: [1, always-multiline]
+  eol-last: 'error'
+  no-global-assign: [ 0 ]
+  no-unsafe-finally: [ 0 ]
+  strict: [ 0 ]
+
+globals:
+  Vue: true
+  Vuex: true
+  VueRouter: true
+  module: true
+  require: true
+  crayfish: true
+  Promise: true
+  UParams: true
+  Geohash: true
+  hybridAPI: true
+  UBT: true
+  process: true
+  importScripts: true
+  createVuexLogger: true
+  TWEEN: true
+  Utils: true
+  AlipayJSBridge: true
+  ap: true
+
+extends: 'eslint:recommended'

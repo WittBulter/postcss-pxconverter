@@ -1,3 +1,4 @@
+import eslint from 'rollup-plugin-eslint'
 import buble from 'rollup-plugin-buble'
 
 export default {
@@ -6,6 +7,6 @@ export default {
     file: 'dist/postcss-pxconverter.js',
     format: 'cjs',
   },
-  plugins: [ buble() ],
+  plugins: [ eslint(), buble() ],
   external: [ 'postcss', 'css', 'object-assign' ],
 }
