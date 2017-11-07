@@ -9,10 +9,7 @@ var objectAssign = _interopDefault(require('object-assign'));
 var pxRegExp = /\b(\d+(\.\d+)?)px\b/;
 var pxGlobalRegExp = new RegExp(pxRegExp.source, 'g');
 var defaultConfig = {
-  baseSize: {
-    rem: 75,
-    vw: 7.5,
-  },
+  baseSize: { rem: 75, vw: 7.5 },
   precision: 6,
   forceRemProps: [ 'font', 'font-size' ],
   keepRuleComment: 'no',
@@ -46,21 +43,36 @@ PxConverter.prototype.processRules = function processRules (rules) {
     if (rule.type === 'keyframes') { return this$1.processRules(rule.keyframes) }
     if (rule.type !== 'rule' && rule.type !== 'keyframe') { return }
 
-    rule.declarations.forEach(function (dec, index) {
-      // 必须为可转换的规则
-      if (dec.type !== 'declaration' || !pxRegExp.test(dec.value)) { return }
-      // 如果包含禁用注释，则忽略
+    var processDeclarations = function (index) {
+      var dec = rule.declarations[index];
+      if (!dec) { return }
+
+      // 必须为可转换的规则，否则去下一条
+      if (dec.type !== 'declaration' || !pxRegExp.test(dec.value)) { return processDeclarations(index + 1) }
+
+      // 如果下一条规则为禁用注释，一起跳过
       var nextDec = rule.declarations[index + 1];
       var isDisabled = nextDec
         && nextDec.type === 'comment'
         && nextDec.comment.trim() === this$1.config.keepRuleComment;
-      if (isDisabled) { return }
+      if (isDisabled) { return processDeclarations(index + 2) }
 
-      var targetUnit = this$1.config.forceRemProps.indexOf(dec.property) > -1
-        ? 'rem'
-        : 'vw';
-      dec.value = this$1.getCalcValue(targetUnit, dec.value);
-    });
+      var sourceValue = dec.value;
+      // 将原本的 px 替换为 rem
+      dec.value = this$1.getCalcValue('rem', sourceValue);
+      // 增加一条更高级的 vw 规则用于覆盖
+      if (this$1.config.forceRemProps.indexOf(dec.property) === -1) {
+        rule.declarations.splice(index + 1, 0, {
+          type: 'declaration',
+          property: dec.property,
+          value: this$1.getCalcValue('vw', sourceValue),
+        });
+        processDeclarations(index + 2);
+      } else {
+        processDeclarations(index + 1);
+      }
+    };
+    processDeclarations(0);
   });
 };
 

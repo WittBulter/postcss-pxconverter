@@ -4,10 +4,7 @@ import objectAssign from 'object-assign'
 const pxRegExp = /\b(\d+(\.\d+)?)px\b/
 const pxGlobalRegExp = new RegExp(pxRegExp.source, 'g')
 const defaultConfig = {
-  baseSize: {
-    rem: 75,
-    vw: 7.5,
-  },
+  baseSize: { rem: 75, vw: 7.5 },
   precision: 6,
   forceRemProps: [ 'font', 'font-size' ],
   keepRuleComment: 'no',
@@ -38,21 +35,37 @@ export default class PxConverter {
       if (rule.type === 'keyframes') return this.processRules(rule.keyframes)
       if (rule.type !== 'rule' && rule.type !== 'keyframe') return
 
-      rule.declarations.forEach((dec, index) => {
-        // 必须为可转换的规则
-        if (dec.type !== 'declaration' || !pxRegExp.test(dec.value)) return
-        // 如果包含禁用注释，则忽略
+      const processDeclarations = index => {
+        const dec = rule.declarations[index]
+        if (!dec) return
+
+        // 必须为可转换的规则，否则去下一条
+        if (dec.type !== 'declaration' || !pxRegExp.test(dec.value)) return processDeclarations(index + 1)
+
+        // 如果下一条规则为禁用注释，一起跳过
         const nextDec = rule.declarations[index + 1]
         const isDisabled = nextDec
           && nextDec.type === 'comment'
           && nextDec.comment.trim() === this.config.keepRuleComment
-        if (isDisabled) return
+        if (isDisabled) return processDeclarations(index + 2)
 
-        const targetUnit = this.config.forceRemProps.indexOf(dec.property) > -1
-          ? 'rem'
-          : 'vw'
-        dec.value = this.getCalcValue(targetUnit, dec.value)
-      })
+        const sourceValue = dec.value
+        // 将原本的 px 替换为 rem
+        dec.value = this.getCalcValue('rem', sourceValue)
+        // 增加一条更高级的 vw 规则用于覆盖
+        if (this.config.forceRemProps.indexOf(dec.property) === -1) {
+          rule.declarations.splice(index + 1, 0, {
+            type: 'declaration',
+            property: dec.property,
+            value: this.getCalcValue('vw', sourceValue),
+          })
+          processDeclarations(index + 2)
+        } else {
+          processDeclarations(index + 1)
+        }
+      }
+
+      processDeclarations(0)
     })
   }
 
